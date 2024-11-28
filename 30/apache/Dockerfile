@@ -11,6 +11,9 @@ RUN set -ex; \
         libldap-common \
         libmagickcore-6.q16-6-extra \
         rsync \
+        ffmpeg \
+        clamav \
+        clamav-daemon \
     ; \
     rm -rf /var/lib/apt/lists/*; \
     \
@@ -41,8 +44,7 @@ RUN set -ex; \
         libpq-dev \
         libwebp-dev \
         libxml2-dev \
-        libzip-dev \
-        ffmpeg \
+        libzip-dev \        
     ; \
     \
     debMultiarch="$(dpkg-architecture --query DEB_BUILD_MULTIARCH)"; \
