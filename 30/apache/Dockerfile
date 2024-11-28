@@ -42,6 +42,7 @@ RUN set -ex; \
         libwebp-dev \
         libxml2-dev \
         libzip-dev \
+        ffmpeg \
     ; \
     \
     debMultiarch="$(dpkg-architecture --query DEB_BUILD_MULTIARCH)"; \
