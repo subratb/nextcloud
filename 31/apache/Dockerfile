@@ -14,6 +14,9 @@ RUN set -ex; \
         libldap-common \
         libmagickcore-6.q16-6-extra \
         rsync \
+        ffmpeg \
+        clamav \
+        clamav-daemon \
     ; \
     rm -rf /var/lib/apt/lists/*; \
     \
