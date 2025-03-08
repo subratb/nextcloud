@@ -1,16 +1,13 @@
-# What is Nextcloud?
+![GitHub last commit](https://img.shields.io/github/last-commit/nextcloud/docker)
+[![GitHub Release](https://img.shields.io/github/v/release/nextcloud/docker?link=https%3A%2F%2Fgithub.com%2Fnextcloud%2Fdocker%2Freleases%2Flatest&label=latest%20Image)](https://github.com/nextcloud/docker/releases/)
+[![Docker Image Version](https://img.shields.io/docker/v/library/nextcloud?sort=semver&logo=nextcloud&label=Nextcloud)](https://nextcloud.com/changelog/)
+![GitHub commits since latest release](https://img.shields.io/github/commits-since/nextcloud/docker/latest)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/m/nextcloud/docker)
+![GitHub contributors](https://img.shields.io/github/contributors/nextcloud/docker?label=contributors%20-%20Thank%20you!)
+![Docker Pulls](https://img.shields.io/docker/pulls/library/nextcloud)
+[![Helm](https://img.shields.io/badge/Helm-0F1689?logo=helm&logoColor=fff)](https://github.com/nextcloud/helm/?tab=readme-ov-file)
 
-[![GitHub CI build status badge](https://github.com/nextcloud/docker/workflows/Images/badge.svg)](https://github.com/nextcloud/docker/actions?query=workflow%3AImages)
-[![update.sh build status badge](https://github.com/nextcloud/docker/workflows/update.sh/badge.svg)](https://github.com/nextcloud/docker/actions?query=workflow%3Aupdate.sh)
-[![amd64 build status badge](https://img.shields.io/jenkins/s/https/doi-janky.infosiftr.net/job/multiarch/job/amd64/job/nextcloud.svg?label=amd64)](https://doi-janky.infosiftr.net/job/multiarch/job/amd64/job/nextcloud)
-[![arm32v5 build status badge](https://img.shields.io/jenkins/s/https/doi-janky.infosiftr.net/job/multiarch/job/arm32v5/job/nextcloud.svg?label=arm32v5)](https://doi-janky.infosiftr.net/job/multiarch/job/arm32v5/job/nextcloud)
-[![arm32v6 build status badge](https://img.shields.io/jenkins/s/https/doi-janky.infosiftr.net/job/multiarch/job/arm32v6/job/nextcloud.svg?label=arm32v6)](https://doi-janky.infosiftr.net/job/multiarch/job/arm32v6/job/nextcloud)
-[![arm32v7 build status badge](https://img.shields.io/jenkins/s/https/doi-janky.infosiftr.net/job/multiarch/job/arm32v7/job/nextcloud.svg?label=arm32v7)](https://doi-janky.infosiftr.net/job/multiarch/job/arm32v7/job/nextcloud)
-[![arm64v8 build status badge](https://img.shields.io/jenkins/s/https/doi-janky.infosiftr.net/job/multiarch/job/arm64v8/job/nextcloud.svg?label=arm64v8)](https://doi-janky.infosiftr.net/job/multiarch/job/arm64v8/job/nextcloud)
-[![i386 build status badge](https://img.shields.io/jenkins/s/https/doi-janky.infosiftr.net/job/multiarch/job/i386/job/nextcloud.svg?label=i386)](https://doi-janky.infosiftr.net/job/multiarch/job/i386/job/nextcloud)
-[![mips64le build status badge](https://img.shields.io/jenkins/s/https/doi-janky.infosiftr.net/job/multiarch/job/mips64le/job/nextcloud.svg?label=mips64le)](https://doi-janky.infosiftr.net/job/multiarch/job/mips64le/job/nextcloud)
-[![ppc64le build status badge](https://img.shields.io/jenkins/s/https/doi-janky.infosiftr.net/job/multiarch/job/ppc64le/job/nextcloud.svg?label=ppc64le)](https://doi-janky.infosiftr.net/job/multiarch/job/ppc64le/job/nextcloud)
-[![s390x build status badge](https://img.shields.io/jenkins/s/https/doi-janky.infosiftr.net/job/multiarch/job/s390x/job/nextcloud.svg?label=s390x)](https://doi-janky.infosiftr.net/job/multiarch/job/s390x/job/nextcloud)
+# What is Nextcloud?
 
 A safe home for all your data. Access & share your files, calendars, contacts, mail & more from any device, on your terms.
 
@@ -30,6 +27,9 @@ The second option is a `fpm` container. It is based on the [php-fpm](https://hub
 ## Getting help
 
 Most Nextcloud Server administrative matters are covered in the official [Nextcloud Admin Manual](https://docs.nextcloud.com/server/latest/admin_manual/) or [other official Nextcloud documentation](https://docs.nextcloud.com) (which are all routinely updated).
+
+[![Discourse Users](https://img.shields.io/discourse/users?server=https%3A%2F%2Fhelp.nextcloud.com&label=Community%20Forum&color=blue&link=https%3A%2F%2Fhelp.nextcloud.com%2F)](https://help.nextcloud.com/)
+[![Discourse Posts](https://img.shields.io/discourse/posts?server=https%3A%2F%2Fhelp.nextcloud.com&label=Community%20Forum&color=blue&link=https%3A%2F%2Fhelp.nextcloud.com%2F)](https://help.nextcloud.com/)
 
 **If you have any problems or usage questions while using the image, please ask for assistance on the [Nextcloud Community Help Forum](https://help.nextcloud.com)** rather than reporting them as "bugs" (unless they are bugs of course). This helps the 
 maintainers (who are volunteers) remain focused on making the image better (rather than responding solely to one-on-one support issues). (Tip: Some of the maintainers are also regular responders to help requests 
@@ -141,6 +141,17 @@ If mounting additional volumes under `/var/www/html`, you should consider:
 
 **Data inside the main folder (`/var/www/html`) will be overridden/removed during installation and upgrades, unless listed in [upgrade.exclude](https://github.com/nextcloud/docker/blob/master/upgrade.exclude).** The additional volumes officially supported are already in that list, but custom volumes will need to be added by you. We suggest mounting custom storage volumes outside of `/var/www/html` and if possible read-only so that making this adjustment is unnecessary. If you must do so, however, you may build a custom image with a modified `/upgrade.exclude` file that incorporates your custom volume(s).
 
+## Running as an arbitrary user / file permissions / changing the default container user
+
+The default user within a container is root (uid = 0). By default, processes inside the container will expect to have root privileges. Network services will drop privileges and use `www-data` to serve requests. 
+
+Depending on your volumes configuration, this can lead to permission issues. You can address this by running the container with a different default user. When changing the default user, the image will no longer assume it has root privileges and will run all processes under the specified uid. To accomplish this, use the `--user` / `user` option in your container environment.
+
+See:
+
+- https://docs.docker.com/engine/containers/run/#user
+- https://github.com/docker-library/docs/tree/master/php#running-as-an-arbitrary-user
+- https://docs.podman.io/en/stable/markdown/podman-run.1.html#user-u-user-group
 
 ## Accessing the Nextcloud command-line interface (`occ`)
 
@@ -236,6 +247,7 @@ To use Redis for memory caching as well as PHP session storage, specify the foll
 
 - `REDIS_HOST` (not set by default) Name of Redis container
 - `REDIS_HOST_PORT` (default: `6379`) Optional port for Redis, only use for external Redis servers that run on non-standard ports.
+- `REDIS_HOST_USER` (not set by default) Optional username for Redis, only use for external Redis servers that require a user.
 - `REDIS_HOST_PASSWORD` (not set by default) Redis password
 
 Check the [Nextcloud documentation](https://docs.nextcloud.com/server/latest/admin_manual/configuration_server/caching_configuration.html) for more information.
@@ -299,6 +311,7 @@ Check the [Nextcloud documentation](https://docs.nextcloud.com/server/latest/adm
 To customize PHP limits you can change the following variables:
 - `PHP_MEMORY_LIMIT` (default `512M`) This sets the maximum amount of memory in bytes that a script is allowed to allocate. This is meant to help prevent poorly written scripts from eating up all available memory but it can prevent normal operation if set too tight.
 - `PHP_UPLOAD_LIMIT` (default `512M`) This sets the upload limit (`post_max_size` and `upload_max_filesize`) for big files. Note that you may have to change other limits depending on your client, webserver or operating system. Check the [Nextcloud documentation](https://docs.nextcloud.com/server/latest/admin_manual/configuration_files/big_file_upload_configuration.html) for more information.
+- `PHP_OPCACHE_MEMORY_CONSUMPTION` (default `128`) This sets the `opcache.memory_consumption` value. It's the size of the shared memory storage used by OPcache, in megabytes. 
 
 ### Apache Configuration
 
@@ -393,7 +406,7 @@ services:
   db:
     image: mariadb:10.11
     restart: always
-    command: --transaction-isolation=READ-COMMITTED --log-bin=binlog --binlog-format=ROW
+    command: --transaction-isolation=READ-COMMITTED
     volumes:
       - db:/var/lib/mysql
     environment:
@@ -441,7 +454,7 @@ services:
   db:
     image: mariadb:10.11
     restart: always
-    command: --transaction-isolation=READ-COMMITTED --log-bin=binlog --binlog-format=ROW
+    command: --transaction-isolation=READ-COMMITTED
     volumes:
       - db:/var/lib/mysql
     environment:
@@ -744,8 +757,16 @@ If there is a relevant existing open issue, you can either add to the discussion
 
 If you believe you've found a new bug, please create a new Issue so that others can try to reproduce it and remediation can be tracked.
 
+![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/nextcloud/docker?label=Open%20Issues)
+![GitHub Issues or Pull Requests by label](https://img.shields.io/github/issues/nextcloud/docker/bug?style=flat&label=Bug%20Reports&color=red)
+![GitHub Issues or Pull Requests by label](https://img.shields.io/github/issues/nextcloud/docker/enhancement?style=flat&label=Enhancement%20Ideas&color=green)
+![GitHub Issues or Pull Requests by label](https://img.shields.io/github/issues/nextcloud/docker/good%20first%20issue?style=flat&label=Good%20First%20Issues)
+
 **If you have any problems or usage questions while using the image, please ask for assistance on the [Nextcloud Community Help Forum](https://help.nextcloud.com)** rather than reporting them as "bugs" (unless they really are bugs of course). This helps the 
 maintainers (who are volunteers) remain focused on making the image better (rather than responding solely to one-on-one support issues). (Tip: Some of the maintainers are also regular responders to help requests 
 on the [Nextcloud Community Help Forum](https://help.nextcloud.com).)
+
+[![Discourse Users](https://img.shields.io/discourse/users?server=https%3A%2F%2Fhelp.nextcloud.com&label=Community%20Forum&color=blue&link=https%3A%2F%2Fhelp.nextcloud.com%2F)](https://help.nextcloud.com/)
+[![Discourse Posts](https://img.shields.io/discourse/posts?server=https%3A%2F%2Fhelp.nextcloud.com&label=Community%20Forum&color=blue&link=https%3A%2F%2Fhelp.nextcloud.com%2F)](https://help.nextcloud.com/)
 
 Most Nextcloud Server matters are covered in the official [Nextcloud Admin Manual](https://docs.nextcloud.com/server/latest/admin_manual/) or the [other official Nextcloud documentation](https://docs.nextcloud.com) (which are routinely updated).

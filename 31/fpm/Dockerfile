@@ -1,5 +1,8 @@
 # DO NOT EDIT: created by update.sh from Dockerfile-debian.template
-FROM php:8.2-apache-bookworm
+FROM php:8.3-fpm-bookworm
+
+# Define the commit hash for imagick as a variable
+ENV IMAGICK_COMMIT_HASH d7d3c24af1b4f599897408f1714600b69a56473b
 
 # entrypoint.sh and cron.sh dependencies
 RUN set -ex; \
@@ -21,6 +24,7 @@ RUN set -ex; \
 # see https://docs.nextcloud.com/server/stable/admin_manual/installation/source_installation.html
 ENV PHP_MEMORY_LIMIT 512M
 ENV PHP_UPLOAD_LIMIT 512M
+ENV PHP_OPCACHE_MEMORY_CONSUMPTION 128
 RUN set -ex; \
     \
     savedAptMark="$(apt-mark showmanual)"; \
@@ -64,14 +68,31 @@ RUN set -ex; \
         zip \
     ; \
     \
+# The master version on the imagick repository is compatible with PHP 8.3. However, the PECL version is not updated yet.
+# As soon as it will get updated, we can switch back to the PECL version, instead of having this workaround.
+    curl -fsSL -o imagick.tar.gz "https://github.com/Imagick/imagick/archive/$IMAGICK_COMMIT_HASH.tar.gz"; \
+    tar -xzf imagick.tar.gz -C /tmp; \
+    rm imagick.tar.gz; \
+    cd "/tmp/imagick-$IMAGICK_COMMIT_HASH"; \
+    sed -i "s/@PACKAGE_VERSION@/git-$(echo ${IMAGICK_COMMIT_HASH} | cut -c 1-7)/" php_imagick.h; \
+    phpize; \
+    ./configure; \
+    make; \
+    make install; \
+    cd; \
+    rm -r "/tmp/imagick-$IMAGICK_COMMIT_HASH"; \
+    \
 # pecl will claim success even if one install fails, so we need to perform each install separately
     pecl install APCu-5.1.24; \
-    pecl install imagick-3.7.0; \
-    pecl install memcached-3.3.0; \
-    pecl install redis-6.1.0; \
+    pecl install igbinary-3.2.16; \
+    pecl install memcached-3.3.0 \
+        --configureoptions 'enable-memcached-igbinary="yes"'; \
+    pecl install redis-6.1.0 \
+        --configureoptions 'enable-redis-igbinary="yes" enable-redis-zstd="yes" enable-redis-lz4="yes"'; \
     \
     docker-php-ext-enable \
         apcu \
+        igbinary \
         imagick \
         memcached \
         redis \
@@ -98,14 +119,19 @@ RUN { \
         echo 'opcache.enable=1'; \
         echo 'opcache.interned_strings_buffer=32'; \
         echo 'opcache.max_accelerated_files=10000'; \
-        echo 'opcache.memory_consumption=128'; \
+        echo 'opcache.memory_consumption=${PHP_OPCACHE_MEMORY_CONSUMPTION}'; \
         echo 'opcache.save_comments=1'; \
         echo 'opcache.revalidate_freq=60'; \
         echo 'opcache.jit=1255'; \
-        echo 'opcache.jit_buffer_size=128M'; \
+        echo 'opcache.jit_buffer_size=8M'; \
     } > "${PHP_INI_DIR}/conf.d/opcache-recommended.ini"; \
     \
     echo 'apc.enable_cli=1' >> "${PHP_INI_DIR}/conf.d/docker-php-ext-apcu.ini"; \
+    \
+    { \
+        echo 'apc.serializer=igbinary'; \
+        echo 'session.serialize_handler=igbinary'; \
+    } >> "${PHP_INI_DIR}/conf.d/docker-php-ext-igbinary.ini"; \
     \
     { \
         echo 'memory_limit=${PHP_MEMORY_LIMIT}'; \
@@ -124,23 +150,8 @@ RUN { \
 
 VOLUME /var/www/html
 
-RUN a2enmod headers rewrite remoteip ; \
-    { \
-     echo 'RemoteIPHeader X-Real-IP'; \
-     echo 'RemoteIPInternalProxy 10.0.0.0/8'; \
-     echo 'RemoteIPInternalProxy 172.16.0.0/12'; \
-     echo 'RemoteIPInternalProxy 192.168.0.0/16'; \
-    } > /etc/apache2/conf-available/remoteip.conf; \
-    a2enconf remoteip
 
-# set apache config LimitRequestBody
-ENV APACHE_BODY_LIMIT 1073741824
-RUN { \
-     echo 'LimitRequestBody ${APACHE_BODY_LIMIT}'; \
-    } > /etc/apache2/conf-available/apache-limits.conf; \
-    a2enconf apache-limits
-
-ENV NEXTCLOUD_VERSION 28.0.12
+ENV NEXTCLOUD_VERSION 31.0.0
 
 RUN set -ex; \
     fetchDeps=" \
@@ -150,8 +161,8 @@ RUN set -ex; \
     apt-get update; \
     apt-get install -y --no-install-recommends $fetchDeps; \
     \
-    curl -fsSL -o nextcloud.tar.bz2 "https://download.nextcloud.com/server/releases/nextcloud-28.0.12.tar.bz2"; \
-    curl -fsSL -o nextcloud.tar.bz2.asc "https://download.nextcloud.com/server/releases/nextcloud-28.0.12.tar.bz2.asc"; \
+    curl -fsSL -o nextcloud.tar.bz2 "https://download.nextcloud.com/server/releases/nextcloud-31.0.0.tar.bz2"; \
+    curl -fsSL -o nextcloud.tar.bz2.asc "https://download.nextcloud.com/server/releases/nextcloud-31.0.0.tar.bz2.asc"; \
     export GNUPGHOME="$(mktemp -d)"; \
 # gpg key from https://nextcloud.com/nextcloud.asc
     gpg --batch --keyserver keyserver.ubuntu.com --recv-keys 28806A878AE423A28372792ED75899B9A724937A; \
@@ -171,4 +182,4 @@ COPY *.sh upgrade.exclude /
 COPY config/* /usr/src/nextcloud/config/
 
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["apache2-foreground"]
+CMD ["php-fpm"]
